@@ -3,10 +3,13 @@ package tests
 import (
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/logging"
+	"ScanEvalApp/internal/scanprocessing"
+
 	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -65,105 +68,7 @@ var expectedResults = map[int]string{
 	33: "baacecbdxbcbdaaeecdabbbdacedabcbaecabcce",
 }
 
-var expectedCorrectedResults = map[int]map[int]string{
-	13: {
-		1:  "c",
-		15: "c",
-		17: "c",
-		33: "b",
-	},
-	47: {
-		9:  "d",
-		10: "d",
-		13: "b",
-		25: "e",
-		30: "e",
-		37: "c",
-	},
-	14: {
-		6:  "e",
-		21: "d",
-	},
-	49: {
-		8:  "d",
-		9:  "c",
-		10: "c",
-		17: "c",
-		34: "d",
-	},
-	44: {
-		19: "b",
-		22: "c",
-		24: "b",
-		25: "d",
-		33: "d",
-	},
-	43: {
-		14: "e",
-		18: "e",
-		29: "a",
-		36: "b",
-	},
-	8: {
-		2:  "d",
-		23: "b",
-		39: "e",
-	},
-	21: {
-		13: "c",
-		23: "b",
-		39: "e",
-	},
-	12: {
-		17: "e",
-	},
-	7: {
-		4: "c",
-	},
-	4: {
-		15: "e",
-	},
-	34: {
-		6:  "c",
-		27: "e",
-	},
-	46: {
-		29: "c",
-	},
-	39: {
-		34: "c",
-		35: "a",
-	},
-	16: {
-		29: "d",
-	},
-	6: {
-		24: "c",
-		26: "a",
-	},
-	42: {
-		9: "a",
-	},
-	5: {
-		4:  "c",
-		15: "c",
-	},
-	23: {
-		9: "c",
-	},
-	37: {
-		25: "d",
-	},
-	10: {
-		13: "e",
-	},
-	48: {
-		11: "b",
-	},
-	33: {
-		24: "d",
-	},
-}
+
 
 var expectedAnswer_1_page = map[int]string{
 	392411: "bccdeeddccdddcxcxceddcxebxcceddbeababddc",
@@ -272,7 +177,7 @@ var expectedAnswer_both_page = map[int]string{
 }
 
 func setupTestDB() (*gorm.DB, error) {
-	testDBPath := "../internal/database/scan-eval-db.db"
+	testDBPath := "../internal/database/scan-eval-test-db.db"
 	db, err := gorm.Open(sqlite.Open(testDBPath), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -281,6 +186,7 @@ func setupTestDB() (*gorm.DB, error) {
 }
 
 func TestAnswerRecognition(t *testing.T) {
+	pdfPath := "assets/tmp/scan-pdfs/Scan_20022025125923.PDF" // Testovací PDF súbor
 	errorLogger := logging.GetErrorLogger()
 	db, err := setupTestDB()
 	if err != nil {
@@ -288,10 +194,19 @@ func TestAnswerRecognition(t *testing.T) {
 		t.Fatalf("Nepodarilo sa pripojiť k databáze: %v", err)
 	}
 
+	exam, err := repository.GetExam(db, 1) // testID = 1
+	if err != nil {
+		t.Fatalf("Nepodarilo sa načítať skúšku: %v", err)
+	}
+
+	startTime := time.Now()
+	scanprocessing.ProcessPDF(pdfPath, exam, db)
+	duration := time.Since(startTime)
+
 	totalQuestions := 0
 	totalCorrect := 0
 	totalMissing := 0
-	totalUnrecognized := 0 
+	totalUnrecognized := 0
 
 	for studentID, expectedAnswers := range expectedAnswer_both_page {
 		student, err := repository.GetStudentByRegistrationNumber(db, uint(studentID), 1) // testID = 1
@@ -302,7 +217,6 @@ func TestAnswerRecognition(t *testing.T) {
 		}
 		fmt.Printf("-----------------------\n")
 		recognizedAnswers := student.Answers
-		//ak nie je nic v DB
 		if len(recognizedAnswers) == 0 {
 			t.Errorf("Študent %d: chýbajúce odpovede\n", studentID)
 			totalMissing += len(expectedAnswers)
@@ -323,26 +237,24 @@ func TestAnswerRecognition(t *testing.T) {
 
 			if recognizedAnswers[i] == expectedAnswers[i] {
 				correctCount++
-			} else if recognizedAnswers[i] == '0' { // Check for unrecognized answer
+			} else if recognizedAnswers[i] == '0' {
 				totalUnrecognized++
 				unrecognized++
 				missingCount++
-			}else {
+			} else {
 				unrecognized++
 				fmt.Printf("Študent %d: Otázka č. %d, očakávané %s, rozpoznané %s\n", studentID, i+1, string(expectedAnswers[i]), string(recognizedAnswers[i]))
 			}
-			
 		}
 
 		totalCorrect += correctCount
 		totalMissing += missingCount
 		fmt.Printf("Študent %d: správne %d/40, nesprávne %d, chýbajúce %d\n", studentID, correctCount, unrecognized, missingCount)
-
 	}
 
 	successRate := float64(totalCorrect) / float64(totalQuestions) * 100
-	fmt.Printf("Celková úspešnosť OCR: %.2f%% (%d/%d správnych odpovedí, %d chýbajúcich, %d nezachytených)\n",
-		successRate, totalCorrect, totalQuestions, totalMissing, totalUnrecognized)
+	fmt.Printf("Celková úspešnosť OCR: %.2f%% (%d/%d správnych odpovedí, %d chýbajúcich, %d nezachytených)\n", successRate, totalCorrect, totalQuestions, totalMissing, totalUnrecognized)
+	fmt.Printf("Čas vyhodnotenia: %.2fs\n", duration.Seconds())
 }
 
 func TestStudentAnswersExistence(t *testing.T) {
