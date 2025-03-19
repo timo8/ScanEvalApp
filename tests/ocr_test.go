@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"path/filepath"
+	"runtime"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -293,8 +295,14 @@ func setupTestDB() (*gorm.DB, error) {
 	return db, nil
 }
 
+func getTestFilePath(relativePath string) string {
+    _, filename, _, _ := runtime.Caller(0) // Zistí cestu k aktuálnemu súboru
+    basePath := filepath.Dir(filename)     // Získa adresár, kde je testovací súbor
+    return filepath.Join(basePath, "..", relativePath) // Vráti absolútnu cestu
+}
+
 func TestAnswerRecognition(t *testing.T) {
-	pdfPath := "assets/tmp/scan-pdfs/Scan_20022025125923.PDF" // Testovací PDF súbor
+	pdfPath := getTestFilePath("../assets/tmp/scan-pdfs/Scan_20022025125923.PDF") // Použitie absolútnej cesty
 	errorLogger := logging.GetErrorLogger()
 	db, err := setupTestDB()
 	if err != nil {
@@ -316,8 +324,8 @@ func TestAnswerRecognition(t *testing.T) {
 	totalMissing := 0
 	totalUnrecognized := 0 // New counter for unrecognized answers
 
-	for studentID, expectedAnswers := range expectedAnswer_both_page {
-		student, err := repository.GetStudentByRegistrationNumber(db, uint(studentID), 1) // testID = 1
+	for studentID, expectedAnswers := range expectedAnswer_005 {
+		student, err := repository.GetStudentByRegistrationNumber(db, uint(studentID), 5)
 		if err != nil {
 			t.Errorf("Študent %d nebol nájdený: %v\n", studentID, err)
 			totalMissing += len(expectedAnswers)
@@ -325,7 +333,7 @@ func TestAnswerRecognition(t *testing.T) {
 		}
 		fmt.Printf("-----------------------\n")
 		recognizedAnswers := student.Answers
-		//ak nie je nic v DB
+		// Ak nie je nič v DB
 		if len(recognizedAnswers) == 0 {
 			t.Errorf("Študent %d: chýbajúce odpovede\n", studentID)
 			totalMissing += len(expectedAnswers)
@@ -350,11 +358,6 @@ func TestAnswerRecognition(t *testing.T) {
 				totalUnrecognized++
 				unrecognized++
 			}
-			//t.Errorf("Študent %d, otázka %d: OCR nezachytilo odpoveď", studentID, i+1)
-			// } else {
-			// 	t.Errorf("Študent %d, otázka %d: očakávané %c, rozpoznané %c",
-			// 		studentID, i+1, expectedAnswers[i], recognizedAnswers[i])
-			// }
 		}
 
 		totalCorrect += correctCount
