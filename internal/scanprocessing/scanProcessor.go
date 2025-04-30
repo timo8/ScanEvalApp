@@ -3,6 +3,7 @@ package scanprocessing
 import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
+	"strings"
 	"sync"
 
 	"ScanEvalApp/internal/logging"
@@ -73,8 +74,8 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	}
 
 	for examID, pages := range failedPagesMap {
-		fmt.Printf("stranka %v", pages)
-		err := ExportFailedPagesToPDF(exam.Title, examID, pages, scanPath, EXPORT_DIR)
+		safeTitle := strings.ReplaceAll(exam.Title, " ", "_")
+		err := ExportFailedPagesToPDF(safeTitle, examID, pages, scanPath, EXPORT_DIR)
 		if err != nil {
 			errorLogger.Error("Nepodarilo sa exportovat PDF s chybnymi stranami", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
 			return
@@ -116,6 +117,9 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	img, err := doc.Image(pageNumber)
 	if err != nil {
 		errorLogger.Error("Chyba pri extrahovaní obrázka z PDF stránky", slog.Int("page", pageNumber), slog.String("error", err.Error()))
+		failedPagesMutex.Lock()
+		failedPagesMap[exam.ID] = append(failedPagesMap[exam.ID], pageNumber)
+		failedPagesMutex.Unlock()
 		return
 	}
 	mat := ImageToMat(img)
@@ -129,6 +133,9 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 
 	if err != nil {
 		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "PDF strana", pageNumber, "error", err.Error())
+		failedPagesMutex.Lock()
+		failedPagesMap[exam.ID] = append(failedPagesMap[exam.ID], pageNumber)
+		failedPagesMutex.Unlock()
 		return
 	}
 

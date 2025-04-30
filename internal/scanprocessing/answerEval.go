@@ -127,6 +127,7 @@ func GetQuestionNumber(mat *gocv.Mat, i int, studentID uint) int {
 	questionMat := mat.Region(rect)
 	defer questionMat.Close()
 	SaveMat(TEMP_IMAGE_PATH, questionMat)
+	questionNum := -1
 	questionNum, err := ocr.ExtractQuestionNumber(TEMP_IMAGE_PATH)
 	files.DeleteFile(TEMP_IMAGE_PATH)
 
