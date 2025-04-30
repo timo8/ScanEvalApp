@@ -17,6 +17,10 @@ var wg sync.WaitGroup
 var mutexUpdate sync.Mutex
 var mutexGetId sync.Mutex
 var counterMutex sync.Mutex
+var failedPagesMap = make(map[uint][]int)
+var failedPagesMutex sync.Mutex
+
+const EXPORT_DIR = "./assets/tmp/"
 
 // ProcessPDF processes a PDF scan and extracts data for students' pages for the given exam.
 //
@@ -38,7 +42,7 @@ var counterMutex sync.Mutex
 //   - The function uses goroutines to process each page concurrently, and a WaitGroup is used to ensure that
 //     all pages are processed before returning.
 //   - Errors encountered during PDF loading or database operations are logged using an error logger.
-func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan chan string, counter *int) {
+func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan chan string, counter *int, hadFailures *bool) {
 	errorLogger := logging.GetErrorLogger()
 
 	// Vyčistenie všetkých stránok študentov pre daný test
@@ -47,6 +51,10 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 		errorLogger.Error("Nepodarilo sa vyčistiť stránky študentov", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
 		return
 	}
+
+	failedPagesMutex.Lock()
+	failedPagesMap = make(map[uint][]int)
+	failedPagesMutex.Unlock()
 
 	doc, err := fitz.New(scanPath)
 	if err != nil {
@@ -59,6 +67,19 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 		go ProcessPage(doc, pageNumber, exam, db, progressChan, totalPages, counter)
 	}
 	wg.Wait()
+
+	if len(failedPagesMap) > 0 {
+		*hadFailures = true
+	}
+
+	for examID, pages := range failedPagesMap {
+		fmt.Printf("stranka %v", pages)
+		err := ExportFailedPagesToPDF(exam.Title, examID, pages, scanPath, EXPORT_DIR)
+		if err != nil {
+			errorLogger.Error("Nepodarilo sa exportovat PDF s chybnymi stranami", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
+			return
+		}
+	}
 }
 
 // ProcessPage processes a single page from the provided PDF document, extracts student information,
@@ -89,6 +110,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 //     extract student information or update the database).
 func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm.DB, progressChan chan string, totalPages int, counter *int) {
 	defer wg.Done()
+	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
 	img, err := doc.Image(pageNumber)
@@ -100,28 +122,46 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	defer mat.Close()
 	mat = MatToGrayscale(mat)
 	mat = FixImageRotation(mat)
+
 	mutexGetId.Lock()
 	student, err := GetStudent(&mat, db, exam.ID)
 	mutexGetId.Unlock()
+
 	if err != nil {
 		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "PDF strana", pageNumber, "error", err.Error())
 		return
 	}
 
-	errorLogger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
-	questionNumber, answers := EvaluateAnswers(&mat, exam.QuestionCount)
+	logger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
+	questionNumber, answers := EvaluateAnswers(&mat, exam.QuestionCount, student.ID)
+
 	if questionNumber == -1 {
-		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok", "PDF strana", pageNumber)
+		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - ziadna otazka detekovana", "PDF strana", pageNumber+1)
+		// Gather pageNumbers to map
+		failedPagesMutex.Lock()
+		failedPagesMap[exam.ID] = append(failedPagesMap[exam.ID], pageNumber)
+		failedPagesMutex.Unlock()
+		return
+	} else if ((questionNumber + 1) % len(answers)) != 0 {
+		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - menej otazok nez pocet", "PDF strana", pageNumber+1)
+		// fmt.Printf("questionNumber %d %% len(answers) %d - strana: %d\n", questionNumber+1, len(answers), pageNumber+1)
+		// Gather pageNumbers to map
+		failedPagesMutex.Lock()
+		failedPagesMap[exam.ID] = append(failedPagesMap[exam.ID], pageNumber)
+		failedPagesMutex.Unlock()
 		return
 	}
+
 	mutexUpdate.Lock()
 	err = repository.UpdateStudentAnswers(db, student.ID, exam.ID, questionNumber, answers, pageNumber+1)
 	mutexUpdate.Unlock()
+
 	if err != nil {
 		errorLogger.Error("Chyba pri aktualizácii študenta v databáze", "studentID", student.ID, "error", err.Error())
 		return
 	}
-	errorLogger.Info("Aktualizované odpovede študenta", "studentID", student.ID, "answers", student.Answers)
+
+	logger.Info("Aktualizované odpovede študenta", "studentID", student.ID, "answers", student.Answers)
 
 	if counter != nil {
 		counterMutex.Lock()

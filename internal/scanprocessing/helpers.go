@@ -5,18 +5,20 @@ import (
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/ocr"
+	"encoding/json"
 	"fmt"
 	"image"
 	"os"
-	"encoding/json"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 
 	"gocv.io/x/gocv"
 	"gorm.io/gorm"
 )
-
-
 
 // FindContours detects external contours in the provided image using edge detection and morphological operations.
 //
@@ -200,7 +202,6 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 	return repository.GetStudentByRegistrationNumber(db, uint(registrationNumber), examID)
 }
 
-
 func LoadConfig(configFile string) error {
 	configPath := CONFIGS_DIR + configFile + ".json"
 	file, err := os.Open(configPath)
@@ -210,7 +211,7 @@ func LoadConfig(configFile string) error {
 	defer file.Close()
 
 	var config struct {
-		MeanIntensityXLowest float64 `json:"mean_intensity_x_lowest"`
+		MeanIntensityXLowest  float64 `json:"mean_intensity_x_lowest"`
 		MeanIntensityXHighest float64 `json:"mean_intensity_x_highest"`
 	}
 
@@ -219,10 +220,35 @@ func LoadConfig(configFile string) error {
 		return fmt.Errorf("Chyba pri dekódovaní konfiguračného súboru: %w", err)
 	}
 
-	
 	MEAN_INTENSITY_X_LOWEST = config.MeanIntensityXLowest
 	MEAN_INTENSITY_X_HIGHEST = config.MeanIntensityXHighest
+	return nil
+}
 
+func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF string, outputPath string) error {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
 
+	if len(pages) == 0 {
+		return nil
+	}
+
+	var pageArgs []string
+	for _, p := range pages {
+		pageArgs = append(pageArgs, strconv.Itoa(p))
+	}
+
+	cmdArgs := append([]string{inputPDF, "cat"}, pageArgs...)
+	outputPDF := filepath.Join(outputPath, fmt.Sprintf("%s%d_failed_pages.pdf", examTitle, examID))
+	cmdArgs = append(cmdArgs, "output", outputPDF)
+
+	cmd := exec.Command("pdftk", cmdArgs...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		errorLogger.Error("Chyba pri spájaní chybných stránok", "error", err.Error(), "output", string(output))
+		return err
+	}
+
+	logger.Info("Chybné strany uložené do PDF", "output", outputPDF)
 	return nil
 }
