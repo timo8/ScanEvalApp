@@ -3,7 +3,6 @@ package scanprocessing
 import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
-	"strings"
 	"sync"
 
 	"ScanEvalApp/internal/logging"
@@ -74,7 +73,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	}
 
 	for examID, pages := range failedPagesMap {
-		safeTitle := strings.ReplaceAll(exam.Title, " ", "_")
+		safeTitle := SanitizeFilename(exam.Title)
 		err := ExportFailedPagesToPDF(safeTitle, examID, pages, scanPath, EXPORT_DIR)
 		if err != nil {
 			errorLogger.Error("Nepodarilo sa exportovat PDF s chybnymi stranami", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
@@ -141,6 +140,15 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 
 	logger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
 	questionNumber, answers := EvaluateAnswers(&mat, exam.QuestionCount, student.ID)
+
+	if len(answers) == 0 {
+		errorLogger.Error("Chyba pri rozpoznávaní odpovedí - žiadne odpovede detekované", "PDF strana", pageNumber+1)
+		// Gather pageNumbers to map
+		failedPagesMutex.Lock()
+		failedPagesMap[exam.ID] = append(failedPagesMap[exam.ID], pageNumber)
+		failedPagesMutex.Unlock()
+		return
+	}
 
 	if questionNumber == -1 {
 		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - ziadna otazka detekovana", "PDF strana", pageNumber+1)
