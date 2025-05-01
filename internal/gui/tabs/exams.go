@@ -137,7 +137,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								generatedPath := ""
 								modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
 								go func() {
-									path, err := latex.ParallelGeneratePDFs(db, exam.ID, common.TEMPLATE_PATH, common.OUTPUT_PDF_PATH)
+									path, err := latex.ParallelGeneratePDFs(db, exam.ID, common.TEMPLATE_PATH, common.GLOBAL_EXPORT_DIR)
 
 									if err != nil {
 										errorLogger.Error("Chyba pri generovaní PDF",

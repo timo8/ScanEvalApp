@@ -30,16 +30,16 @@ var MEAN_INTENSITY_X_HIGHEST float64
 // Returns:
 //   - int: The index of the last question found (or -1 if none were found).
 //   - []rune: A slice containing the student's selected answers as runes (e.g., 'A', 'B', 'C', etc.).
-func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, studentID uint) (int, []rune) {
+func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
 	logger := logging.GetLogger()
 	var studentAnswers []rune
 	croppedMat := CropMatAnswersOnly(mat)
-	questionNumber := 0
+	questionNumber := -1
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
 		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i))
 		// if we dont have question number yet try to find it
-		if questionNumber == 0 {
-			questionNumber = GetQuestionNumber(&croppedMat, i, studentID)
+		if questionNumber == -1 {
+			questionNumber = GetQuestionNumber(&croppedMat, i)
 			continue
 		}
 		questionNumber++
@@ -51,7 +51,7 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, studentID uint) (int,
 	}
 	*mat = croppedMat
 	// if we didnt find question number in whole page
-	if questionNumber == 0 {
+	if questionNumber == -1 {
 		return -1, nil
 	}
 	return questionNumber - 1, studentAnswers
@@ -121,7 +121,7 @@ func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) imag
 //
 // Returns:
 //   - int: The extracted question number. If OCR fails, it returns zero (default int value).
-func GetQuestionNumber(mat *gocv.Mat, i int, studentID uint) int {
+func GetQuestionNumber(mat *gocv.Mat, i int) int {
 	errorLogger := logging.GetErrorLogger()
 	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
 	questionMat := mat.Region(rect)
@@ -134,7 +134,6 @@ func GetQuestionNumber(mat *gocv.Mat, i int, studentID uint) int {
 	if err != nil {
 		errorLogger.Error("Chyba pri extrakcii čísla otázky",
 			slog.Int("questionIndex", i),
-			slog.Uint64("studentID", uint64(studentID)),
 			slog.String("error", err.Error()),
 			slog.Uint64("questionNum", uint64(questionNum)),
 		)

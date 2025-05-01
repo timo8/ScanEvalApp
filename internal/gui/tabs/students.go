@@ -2,7 +2,7 @@ package tabs
 
 import (
 	"ScanEvalApp/internal/database/repository"
-	pdf_helper "ScanEvalApp/internal/files/pdf"
+	"ScanEvalApp/internal/files/pdf"
 	"fmt"
 
 	"gioui.org/layout"
@@ -142,7 +142,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 							if downloadButtons[i-1].Clicked(gtx) {
 								fmt.Printf("stiahnuť vyplneny harok")
 								// sem si zavolam funkciu, ktora pre studenta slicne z pdf dane subory a to ulozi ako pdf do tmp s nazvom studentovho id
-								err := pdf_helper.SlicePdfForStudent(db, student.RegistrationNumber)
+								err := pdf.SlicePdfForStudent(db, student.RegistrationNumber)
 								if err != nil {
 									errorLogger.Error("Chyba pri slicingu PDF pre študenta", "registration_number", student.RegistrationNumber, "error", err.Error())
 								} else {

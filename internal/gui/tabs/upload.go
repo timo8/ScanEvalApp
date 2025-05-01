@@ -190,7 +190,7 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 		return
 	}
 
-	var hadFailures bool = false
+	hadFailures := false
 	t.progressChan <- "Spracovanie PDF sa začalo..."
 	scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan, &counter, &hadFailures)
 
@@ -198,7 +198,7 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 	safeTitle = repository.RemoveDiacritics(safeTitle)
 
 	if hadFailures {
-		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s%s_%d_failed_pages.pdf", common.EXPORT_DIR, safeTitle, t.examID)
+		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s%s_%d_failed_pages.pdf", common.GLOBAL_EXPORT_DIR, safeTitle, t.examID)
 	} else {
 		t.progressChan <- "Spracovanie dokončené."
 	}

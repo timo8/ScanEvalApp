@@ -260,13 +260,13 @@ func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF
 
 // removeDiacritics removes accents like é -> e, ň -> n, etc.
 func RemoveDiacritics(s string) string {
-	t := transform.Chain(norm.NFD, transform.RemoveFunc(isMn), norm.NFC)
+	t := transform.Chain(norm.NFD, transform.RemoveFunc(isDiacritic), norm.NFC)
 	result, _, _ := transform.String(t, s)
 	return result
 }
 
-func isMn(r rune) bool {
-	return unicode.Is(unicode.Mn, r) // Mn = nonspacing marks
+func isDiacritic(r rune) bool {
+	return unicode.Is(unicode.Mn, r)
 }
 
 // sanitizeFilename converts string to safe ASCII-only filename
@@ -283,4 +283,10 @@ func SanitizeFilename(name string) string {
 	name = reg.ReplaceAllString(name, "")
 
 	return name
+}
+
+func AddFailedPage(failedPagesMap map[uint][]int, examID uint, pageNumber int) {
+	failedPagesMutex.Lock()
+	defer failedPagesMutex.Unlock()
+	failedPagesMap[examID] = append(failedPagesMap[examID], pageNumber)
 }

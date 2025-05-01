@@ -1,4 +1,4 @@
-package pdf_helper
+package pdf
 
 import (
 	"ScanEvalApp/internal/common"
@@ -53,7 +53,7 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
 
 	// TODO - zmenit staticku cestu, treba vybrat dynamicky z priecinka
 	inputPDF := "/home/timo/ScanEvalApp/assets/tmp/scan-pdfs/sken_zasadacka_190_400dpi.pdf"
-	outputPDF := filepath.Join(common.OUTPUT_PDF_PATH, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
+	outputPDF := filepath.Join(common.GLOBAL_EXPORT_DIR, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
 
 	// Convert the list of pages into arguments for pdftk
 	var pageArgs []string

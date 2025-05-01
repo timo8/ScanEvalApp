@@ -4,7 +4,7 @@ import (
 	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
-	pdf_helper "ScanEvalApp/internal/files/pdf"
+	"ScanEvalApp/internal/files/pdf"
 	"sync"
 
 	"ScanEvalApp/internal/logging"
@@ -74,7 +74,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 
 	for examID, pages := range failedPagesMap {
 		safeTitle := SanitizeFilename(exam.Title)
-		err := pdf_helper.ExportFailedPagesToPDF(safeTitle, examID, pages, scanPath, common.EXPORT_DIR)
+		err := pdf.ExportFailedPagesToPDF(safeTitle, examID, pages, scanPath, common.GLOBAL_EXPORT_DIR)
 		if err != nil {
 			errorLogger.Error("Nepodarilo sa exportovat PDF s chybnymi stranami", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
 			return
@@ -116,9 +116,7 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	img, err := doc.Image(pageNumber)
 	if err != nil {
 		errorLogger.Error("Chyba pri extrahovaní obrázka z PDF stránky", slog.Int("page", pageNumber), slog.String("error", err.Error()))
-		failedPagesMutex.Lock()
-		failedPagesMap[exam.ID] = append(failedPagesMap[exam.ID], pageNumber)
-		failedPagesMutex.Unlock()
+		AddFailedPage(failedPagesMap, exam.ID, pageNumber)
 		return
 	}
 	mat := ImageToMat(img)
@@ -132,38 +130,30 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 
 	if err != nil {
 		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "PDF strana", pageNumber, "error", err.Error())
-		failedPagesMutex.Lock()
-		failedPagesMap[exam.ID] = append(failedPagesMap[exam.ID], pageNumber)
-		failedPagesMutex.Unlock()
+		AddFailedPage(failedPagesMap, exam.ID, pageNumber)
 		return
 	}
 
 	logger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
-	questionNumber, answers := EvaluateAnswers(&mat, exam.QuestionCount, student.ID)
+	questionNumber, answers := EvaluateAnswers(&mat, exam.QuestionCount)
 
 	if len(answers) == 0 {
 		errorLogger.Error("Chyba pri rozpoznávaní odpovedí - žiadne odpovede detekované", "PDF strana", pageNumber+1)
 		// Gather pageNumbers to map
-		failedPagesMutex.Lock()
-		failedPagesMap[exam.ID] = append(failedPagesMap[exam.ID], pageNumber)
-		failedPagesMutex.Unlock()
+		AddFailedPage(failedPagesMap, exam.ID, pageNumber)
 		return
 	}
 
 	if questionNumber == -1 {
 		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - ziadna otazka detekovana", "PDF strana", pageNumber+1)
 		// Gather pageNumbers to map
-		failedPagesMutex.Lock()
-		failedPagesMap[exam.ID] = append(failedPagesMap[exam.ID], pageNumber)
-		failedPagesMutex.Unlock()
+		AddFailedPage(failedPagesMap, exam.ID, pageNumber)
 		return
-	} else if ((questionNumber + 1) % len(answers)) != 0 {
+	} else if ((questionNumber + 1) % NUMBER_OF_QUESTIONS_PER_PAGE) != 0 {
 		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - menej otazok nez pocet", "PDF strana", pageNumber+1)
 		// fmt.Printf("questionNumber %d %% len(answers) %d - strana: %d\n", questionNumber+1, len(answers), pageNumber+1)
 		// Gather pageNumbers to map
-		failedPagesMutex.Lock()
-		failedPagesMap[exam.ID] = append(failedPagesMap[exam.ID], pageNumber)
-		failedPagesMutex.Unlock()
+		AddFailedPage(failedPagesMap, exam.ID, pageNumber)
 		return
 	}
 

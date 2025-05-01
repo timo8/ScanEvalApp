@@ -7,20 +7,14 @@ const (
 	// Path to the main LaTeX template used for PDF generation
 	TEMPLATE_PATH = "./assets/latex/main.tex"
 
-	// Directory where generated PDF files are stored
-	OUTPUT_PDF_PATH = "./assets/tmp"
-
 	// Temporary directory used during PDF generation for LaTeX compiling purposes
 	TEMPORARY_PDF_PATH = "./assets/tmp"
-
-	// Export dir path where to store all kind of PDFs
-	EXPORT_DIR = "./assets/tmp/"
 )
 
-// TODO - prerobit nejako, aby sa vracali normalne spravy, ked nastane error
+// TODO - prerobit nejako, aby sa vracali normalne spravy, ked nastane error, toto je zatial ako SABLONA
 const (
-	StatusSuccess        = 0
-	StatusFileNotFound   = 1
-	StatusInvalidFormat  = 2
-	StatusProcessingFail = 3
+	SUCCESS         = 0
+	FILE_NOT_FOUND  = 1
+	INVALID_FORMAT  = 2
+	PROCESSING_FAIL = 3
 )

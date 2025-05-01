@@ -118,13 +118,13 @@ func ExtractQuestionNumber(path string) (int, error) {
 	logger := logging.GetLogger()
 	dt, err := OcrImage(path, PSM_SINGLE_LINE)
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
 	var num int
 	_, err = fmt.Sscan(dt, &num)
 	if err != nil {
 		errorLogger.Error("Failed to convert QuestionNumber to integer", slog.String("error", err.Error()))
-		return 0, err
+		return -1, err
 	}
 	logger.Info("Question number", slog.Int("number", num))
 	return num, nil
