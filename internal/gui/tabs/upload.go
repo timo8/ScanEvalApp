@@ -2,6 +2,7 @@ package tabs
 
 import (
 	"fmt"
+	"strings"
 
 	"gioui.org/app"
 
@@ -194,8 +195,11 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 	t.progressChan <- "Spracovanie PDF sa začalo..."
 	scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan, &counter, &hadFailures)
 
+	safeTitle := strings.ReplaceAll(exam.Title, " ", "_")
+	safeTitle = repository.RemoveDiacritics(safeTitle)
+
 	if hadFailures {
-		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s%s_%d_failed_pages.pdf", EXPORT_DIR, exam.Title, t.examID)
+		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s%s_%d_failed_pages.pdf", EXPORT_DIR, safeTitle, t.examID)
 	} else {
 		t.progressChan <- "Spracovanie dokončené."
 	}
