@@ -235,7 +235,7 @@ func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF
 
 	var pageArgs []string
 	for _, p := range pages {
-		pageArgs = append(pageArgs, strconv.Itoa(p))
+		pageArgs = append(pageArgs, strconv.Itoa(p+1))
 	}
 
 	cmdArgs := append([]string{inputPDF, "cat"}, pageArgs...)
