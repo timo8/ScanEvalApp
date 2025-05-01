@@ -1,8 +1,10 @@
 package scanprocessing
 
 import (
+	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
+	pdf_helper "ScanEvalApp/internal/files/pdf"
 	"sync"
 
 	"ScanEvalApp/internal/logging"
@@ -19,8 +21,6 @@ var mutexGetId sync.Mutex
 var counterMutex sync.Mutex
 var failedPagesMap = make(map[uint][]int)
 var failedPagesMutex sync.Mutex
-
-const EXPORT_DIR = "./assets/tmp/"
 
 // ProcessPDF processes a PDF scan and extracts data for students' pages for the given exam.
 //
@@ -74,7 +74,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 
 	for examID, pages := range failedPagesMap {
 		safeTitle := SanitizeFilename(exam.Title)
-		err := ExportFailedPagesToPDF(safeTitle, examID, pages, scanPath, EXPORT_DIR)
+		err := pdf_helper.ExportFailedPagesToPDF(safeTitle, examID, pages, scanPath, common.EXPORT_DIR)
 		if err != nil {
 			errorLogger.Error("Nepodarilo sa exportovat PDF s chybnymi stranami", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
 			return

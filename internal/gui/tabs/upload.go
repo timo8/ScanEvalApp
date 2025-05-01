@@ -17,6 +17,7 @@ import (
 	"log"
 	//"path/filepath"
 	//"ScanEvalApp/internal/database/models"
+	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/gui/themeUI"
@@ -30,8 +31,6 @@ import (
 	//"encoding/csv"
 	"os"
 )
-
-const EXPORT_DIR = "./assets/tmp/"
 
 type UploadTab struct {
 	button       widget.Clickable
@@ -199,7 +198,7 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 	safeTitle = repository.RemoveDiacritics(safeTitle)
 
 	if hadFailures {
-		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s%s_%d_failed_pages.pdf", EXPORT_DIR, safeTitle, t.examID)
+		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s%s_%d_failed_pages.pdf", common.EXPORT_DIR, safeTitle, t.examID)
 	} else {
 		t.progressChan <- "Spracovanie dokončené."
 	}
