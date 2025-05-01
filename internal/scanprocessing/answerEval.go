@@ -1,6 +1,7 @@
 package scanprocessing
 
 import (
+	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/logging"
 	"ScanEvalApp/internal/ocr"
@@ -34,11 +35,11 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
 	logger := logging.GetLogger()
 	var studentAnswers []rune
 	croppedMat := CropMatAnswersOnly(mat)
-	questionNumber := -1
+	questionNumber := common.QUESTION_NUMBER_NOT_FOUND
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
 		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i))
 		// if we dont have question number yet try to find it
-		if questionNumber == -1 {
+		if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
 			questionNumber = GetQuestionNumber(&croppedMat, i)
 			continue
 		}
@@ -51,8 +52,8 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
 	}
 	*mat = croppedMat
 	// if we didnt find question number in whole page
-	if questionNumber == -1 {
-		return -1, nil
+	if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
+		return common.QUESTION_NUMBER_NOT_FOUND, nil
 	}
 	return questionNumber - 1, studentAnswers
 }
@@ -127,7 +128,6 @@ func GetQuestionNumber(mat *gocv.Mat, i int) int {
 	questionMat := mat.Region(rect)
 	defer questionMat.Close()
 	SaveMat(TEMP_IMAGE_PATH, questionMat)
-	questionNum := -1
 	questionNum, err := ocr.ExtractQuestionNumber(TEMP_IMAGE_PATH)
 	files.DeleteFile(TEMP_IMAGE_PATH)
 
@@ -135,7 +135,7 @@ func GetQuestionNumber(mat *gocv.Mat, i int) int {
 		errorLogger.Error("Chyba pri extrakcii čísla otázky",
 			slog.Int("questionIndex", i),
 			slog.String("error", err.Error()),
-			slog.Uint64("questionNum", uint64(questionNum)),
+			slog.Int("questionNum", questionNum),
 		)
 	}
 

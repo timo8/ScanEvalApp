@@ -74,7 +74,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 
 	for examID, pages := range failedPagesMap {
 		safeTitle := SanitizeFilename(exam.Title)
-		err := pdf.ExportFailedPagesToPDF(safeTitle, examID, pages, scanPath, common.GLOBAL_EXPORT_DIR)
+		err := pdf.ExportFailedPagesToPDF(safeTitle, examID, pages, scanPath)
 		if err != nil {
 			errorLogger.Error("Nepodarilo sa exportovat PDF s chybnymi stranami", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
 			return
@@ -144,7 +144,7 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 		return
 	}
 
-	if questionNumber == -1 {
+	if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
 		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - ziadna otazka detekovana", "PDF strana", pageNumber+1)
 		// Gather pageNumbers to map
 		AddFailedPage(failedPagesMap, exam.ID, pageNumber)

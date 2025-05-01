@@ -9,6 +9,9 @@ const (
 
 	// Temporary directory used during PDF generation for LaTeX compiling purposes
 	TEMPORARY_PDF_PATH = "./assets/tmp"
+
+	// Represents a value which means no question number was found
+	QUESTION_NUMBER_NOT_FOUND = -1
 )
 
 // TODO - prerobit nejako, aby sa vracali normalne spravy, ked nastane error, toto je zatial ako SABLONA

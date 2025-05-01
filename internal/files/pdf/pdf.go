@@ -77,7 +77,7 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
 	return nil
 }
 
-func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF string, outputPath string) error {
+func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF string) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -91,7 +91,7 @@ func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF
 	}
 
 	cmdArgs := append([]string{inputPDF, "cat"}, pageArgs...)
-	outputPDF := filepath.Join(outputPath, fmt.Sprintf("%s%d_failed_pages.pdf", examTitle, examID))
+	outputPDF := filepath.Join(common.GLOBAL_EXPORT_DIR, fmt.Sprintf("%s%d_failed_pages.pdf", examTitle, examID))
 	cmdArgs = append(cmdArgs, "output", outputPDF)
 
 	cmd := exec.Command("pdftk", cmdArgs...)
