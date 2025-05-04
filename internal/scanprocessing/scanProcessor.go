@@ -36,12 +36,15 @@ var failedPagesMutex sync.Mutex
 //   - exam: A pointer to the exam object that the pages belong to, used for database operations.
 //   - db: A pointer to the GORM database object used for interacting with the database.
 //   - progressChan: A channel used for sending progress updates during the processing of pages.
-//   - counter: A pointer to an integer used for tracking the progress or processing count.
+//   - hadFailures: A pointer to a boolean that will be set to true if any pages failed to process.
 //
 // Notes:
-//   - The function uses goroutines to process each page concurrently, and a WaitGroup is used to ensure that
-//     all pages are processed before returning.
-//   - Errors encountered during PDF loading or database operations are logged using an error logger.
+//   - The function uses goroutines to process each page concurrently, and a WaitGroup to ensure
+//     all processing is complete before proceeding.
+//   - Pages that fail due to extraction, recognition, or database issues are recorded in `failedPagesMap`.
+//   - At the end of processing, all failed pages are exported to a separate PDF file using `ExportFailedPagesToPDF`
+//     for further inspection or manual correction.
+//   - Errors encountered during PDF loading or database operations are logged using the error logger.
 func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan chan string, counter *int, hadFailures *bool) {
 	errorLogger := logging.GetErrorLogger()
 
@@ -86,28 +89,29 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 // evaluates their answers, and updates the student record in the database.
 //
 // The function performs the following tasks:
-// 1. Extracts the image of the specified page from the provided PDF document.
-// 2. Converts the image to a grayscale matrix and applies rotation correction.
-// 3. Retrieves the student associated with the page using OCR or QR code extraction.
-// 4. Evaluates the student's answers from the image and stores the results in the database.
-// 5. Sends progress updates to the `progressChan` channel and increments the `counter`.
-// 6. Logs important steps, student information, and any errors encountered during processing.
+//  1. Extracts the image of the specified page from the PDF document.
+//  2. Converts the image to a grayscale matrix and applies rotation correction.
+//  3. Retrieves the student associated with the page using OCR or QR code extraction.
+//  4. Evaluates the student's answers from the image and stores the results in the database.
+//  5. If any step fails (e.g., image extraction, student identification, answer recognition, or DB update),
+//     the page number is recorded in `failedPagesMap`.
+//  6. Sends progress updates to the `progressChan` and increments the shared `counter`.
+//  7. Signals completion to the parent WaitGroup.
 //
 // Parameters:
 //   - doc: A pointer to the fitz.Document representing the loaded PDF document.
-//   - pageNumber: The page number (index) to process within the document.
+//   - pageNumber: The page index (zero-based) to process within the document.
 //   - exam: A pointer to the `models.Exam` object representing the exam details.
 //   - db: A pointer to the GORM database object for database operations.
 //   - progressChan: A channel used to send progress updates, such as the number of pages processed.
-//   - totalPages: The total number of pages in the PDF document to track progress.
-//   - counter: A pointer to an integer for counting the number of processed pages.
+//   - totalPages: The total number of pages in the PDF document.
+//   - counter: A pointer to an integer for counting the number of successfully processed pages.
 //
 // Notes:
-//   - This function uses synchronization primitives (`mutexGetId`, `mutexUpdate`, `counterMutex`) to ensure that database
-//     interactions and the counter are thread-safe when processing pages concurrently.
-//   - The `wg.Done()` is called to indicate the completion of processing for the current page in the goroutine.
-//   - Errors are logged and the process halts further processing for the page in case of critical issues (e.g., failure to
-//     extract student information or update the database).
+//   - The function uses synchronization primitives (`mutexGetId`, `mutexUpdate`, `counterMutex`) to
+//     ensure that concurrent access to shared resources is safe.
+//   - The global `failedPagesMap` is updated in a thread-safe manner when a page fails processing.
+//   - Exporting of failed pages is handled later in `ProcessPDF`, not here.
 func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm.DB, progressChan chan string, totalPages int, counter *int) {
 	defer wg.Done()
 	logger := logging.GetLogger()

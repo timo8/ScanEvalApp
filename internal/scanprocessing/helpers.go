@@ -265,6 +265,7 @@ func RemoveDiacritics(s string) string {
 	return result
 }
 
+// checks for diacritic
 func isDiacritic(r rune) bool {
 	return unicode.Is(unicode.Mn, r)
 }
@@ -285,6 +286,7 @@ func SanitizeFilename(name string) string {
 	return name
 }
 
+// Adds a failed page into failedPagesMap with the use of locks
 func AddFailedPage(failedPagesMap map[uint][]int, examID uint, pageNumber int) {
 	failedPagesMutex.Lock()
 	defer failedPagesMutex.Unlock()

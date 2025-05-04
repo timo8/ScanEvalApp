@@ -77,6 +77,8 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
 	return nil
 }
 
+// ExportFailedPagesToPDF extracts a subset of pages (marked as failed) from the input PDF
+// and saves them into a separate output PDF file.
 func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF string) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()

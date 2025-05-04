@@ -17,6 +17,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// ImportStudentsFromCSV parses student records from the given CSV content
+// and stores them in the database.
 func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
@@ -63,6 +65,8 @@ func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
 	return nil
 }
 
+// ExportStudentsToCSV exports all students associated with the given exam
+// into a CSV file.
 func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
