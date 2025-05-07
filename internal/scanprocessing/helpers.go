@@ -287,8 +287,8 @@ func SanitizeFilename(name string) string {
 }
 
 // Adds a failed page into failedPagesMap with the use of locks
-func AddFailedPage(failedPagesMap map[uint][]int, examID uint, pageNumber int) {
-	failedPagesMutex.Lock()
-	defer failedPagesMutex.Unlock()
-	failedPagesMap[examID] = append(failedPagesMap[examID], pageNumber)
+func AddFailedPage(failedPages *FailedPages, examID uint, pageNumber int) {
+	failedPages.mu.Lock()
+	defer failedPages.mu.Unlock()
+	failedPages.data[examID] = append(failedPages.data[examID], pageNumber)
 }

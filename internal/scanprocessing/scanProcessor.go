@@ -19,8 +19,11 @@ var wg sync.WaitGroup
 var mutexUpdate sync.Mutex
 var mutexGetId sync.Mutex
 var counterMutex sync.Mutex
-var failedPagesMap = make(map[uint][]int)
-var failedPagesMutex sync.Mutex
+
+type FailedPages struct {
+	mu   sync.Mutex
+	data map[uint][]int
+}
 
 // ProcessPDF processes a PDF scan and extracts data for students' pages for the given exam.
 //
@@ -55,9 +58,9 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 		return
 	}
 
-	failedPagesMutex.Lock()
-	failedPagesMap = make(map[uint][]int)
-	failedPagesMutex.Unlock()
+	failedPages := &FailedPages{
+		data: make(map[uint][]int),
+	}
 
 	doc, err := fitz.New(scanPath)
 	if err != nil {
@@ -67,15 +70,15 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	totalPages := doc.NumPage()
 	for pageNumber := 0; pageNumber < totalPages; pageNumber++ {
 		wg.Add(1)
-		go ProcessPage(doc, pageNumber, exam, db, progressChan, totalPages, counter)
+		go ProcessPage(doc, pageNumber, exam, db, progressChan, totalPages, counter, failedPages)
 	}
 	wg.Wait()
 
-	if len(failedPagesMap) > 0 {
+	if len(failedPages.data) > 0 {
 		*hadFailures = true
 	}
 
-	for examID, pages := range failedPagesMap {
+	for examID, pages := range failedPages.data {
 		safeTitle := SanitizeFilename(exam.Title)
 		err := pdf.ExportFailedPagesToPDF(safeTitle, examID, pages, scanPath)
 		if err != nil {
@@ -112,7 +115,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 //     ensure that concurrent access to shared resources is safe.
 //   - The global `failedPagesMap` is updated in a thread-safe manner when a page fails processing.
 //   - Exporting of failed pages is handled later in `ProcessPDF`, not here.
-func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm.DB, progressChan chan string, totalPages int, counter *int) {
+func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm.DB, progressChan chan string, totalPages int, counter *int, failedPages *FailedPages) {
 	defer wg.Done()
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
@@ -120,7 +123,7 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	img, err := doc.Image(pageNumber)
 	if err != nil {
 		errorLogger.Error("Chyba pri extrahovaní obrázka z PDF stránky", slog.Int("page", pageNumber), slog.String("error", err.Error()))
-		AddFailedPage(failedPagesMap, exam.ID, pageNumber)
+		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
 	}
 	mat := ImageToMat(img)
@@ -134,7 +137,7 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 
 	if err != nil {
 		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "PDF strana", pageNumber, "error", err.Error())
-		AddFailedPage(failedPagesMap, exam.ID, pageNumber)
+		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
 	}
 
@@ -144,20 +147,20 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	if len(answers) == 0 {
 		errorLogger.Error("Chyba pri rozpoznávaní odpovedí - žiadne odpovede detekované", "PDF strana", pageNumber+1)
 		// Gather pageNumbers to map
-		AddFailedPage(failedPagesMap, exam.ID, pageNumber)
+		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
 	}
 
 	if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
 		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - ziadna otazka detekovana", "PDF strana", pageNumber+1)
 		// Gather pageNumbers to map
-		AddFailedPage(failedPagesMap, exam.ID, pageNumber)
+		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
 	} else if ((questionNumber + 1) % NUMBER_OF_QUESTIONS_PER_PAGE) != 0 {
 		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - menej otazok nez pocet", "PDF strana", pageNumber+1)
 		// fmt.Printf("questionNumber %d %% len(answers) %d - strana: %d\n", questionNumber+1, len(answers), pageNumber+1)
 		// Gather pageNumbers to map
-		AddFailedPage(failedPagesMap, exam.ID, pageNumber)
+		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
 	}
 
