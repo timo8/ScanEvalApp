@@ -64,8 +64,10 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 
 	if _, err := os.Stat(inputPDF); err != nil {
 		if os.IsNotExist(err) {
+			errorLogger.Error("PDF súbor pre test neexistuje", "file_path", inputPDF, slog.String("error", err.Error()))
 			return "", fmt.Errorf("PDF súbor pre test neexistuje: %s", inputPDF)
 		}
+		errorLogger.Error("Chyba pri kontrole PDF súboru", "file_path", inputPDF, slog.String("error", err.Error()))
 		return "", fmt.Errorf("chyba pri kontrole PDF súboru: %w", err)
 	}
 
