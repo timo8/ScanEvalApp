@@ -1,8 +1,6 @@
 package tabs
 
 import (
-	"log"
-
 	"gioui.org/app"
 	"gioui.org/layout"
 	"gioui.org/unit"
@@ -12,6 +10,8 @@ import (
 	"ScanEvalApp/internal/config"
 	"ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
+	"ScanEvalApp/internal/logging"
+	"log/slog"
 
 	"github.com/sqweek/dialog"
 )
@@ -22,6 +22,8 @@ type SettingTab struct {
 }
 
 func NewSettingTab(w *app.Window) *SettingTab {
+	errorLogger := logging.GetErrorLogger()
+
 	tab := &SettingTab{
 		selectFolderBtn: widget.Clickable{},
 	}
@@ -29,24 +31,26 @@ func NewSettingTab(w *app.Window) *SettingTab {
 	if path, err := config.LoadLastPath(); err == nil {
 		tab.selectedPath = path
 	} else {
-		log.Println("Nepodarilo sa načítať poslednú cestu:", err)
+		errorLogger.Error("Nepodarilo sa načítať poslednú cestu", slog.String("error", err.Error()))
 	}
 
 	return tab
 }
 
 func (t *SettingTab) Layout(gtx layout.Context, th *themeUI.Theme, w *app.Window) layout.Dimensions {
+	errorLogger := logging.GetErrorLogger()
+
 	if t.selectFolderBtn.Clicked(gtx) {
 		go func() {
 			dir, err := dialog.Directory().Title("Vyber priečinok").Browse()
 			if err != nil {
-				log.Println("Chyba pri výbere priečinka:", err)
+				errorLogger.Error("Chyba pri výbere priečinka", slog.String("error", err.Error()))
 				return
 			}
 			t.selectedPath = dir
 
 			if err := config.SaveLastPath(dir); err != nil {
-				log.Println("Chyba pri ukladaní cesty:", err)
+				errorLogger.Error("Chyba pri ukladaní cesty", slog.String("error", err.Error()))
 			}
 
 			w.Invalidate()
