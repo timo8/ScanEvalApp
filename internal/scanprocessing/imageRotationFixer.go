@@ -30,13 +30,11 @@ func FindBorderRotatedRectangle(mat gocv.Mat) gocv.RotatedRect {
 	logger := logging.GetLogger()
 
 	contours := FindContours(mat)
-	// Find rectangle
 	for i := 0; i < contours.Size(); i++ {
 		c := contours.At(i)
 		approx := gocv.ApproxPolyDP(c, 0.01*gocv.ArcLength(c, true), true)
 		if approx.Size() == 4 && gocv.ContourArea(approx) > BORDER_RECTANGLE_AREA_SIZE {
 			rect := gocv.MinAreaRect(approx)
-			//DrawRotatedRectangle(mat, rect)
 			return rect
 		}
 	}
@@ -61,7 +59,6 @@ func FindBorderRotatedRectangle(mat gocv.Mat) gocv.RotatedRect {
 //   - The function uses the center of the image for rotation and assumes the presence of a detectable border rectangle.
 func FixImageRotation(mat gocv.Mat) gocv.Mat {
 	rect := FindBorderRotatedRectangle(mat)
-	// Rotate image
 	angle := rect.Angle - 90
 	if math.Abs(angle) > 45 {
 		angle += 90

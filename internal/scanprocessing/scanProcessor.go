@@ -54,7 +54,6 @@ type FailedPages struct {
 func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan chan string, counter *int, hadFailures *bool) {
 	errorLogger := logging.GetErrorLogger()
 
-	// Vyčistenie všetkých stránok študentov pre daný test
 	err := repository.ClearStudentForExam(db, exam.ID)
 	if err != nil {
 		errorLogger.Error("Nepodarilo sa vyčistiť stránky študentov", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
@@ -162,20 +161,16 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 
 	if len(answers) == 0 {
 		errorLogger.Error("Chyba pri rozpoznávaní odpovedí - žiadne odpovede detekované", "PDF strana", pageNumber+1)
-		// Gather pageNumbers to map
 		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
 	}
 
 	if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
 		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - ziadna otazka detekovana", "PDF strana", pageNumber+1)
-		// Gather pageNumbers to map
 		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
 	} else if ((questionNumber + 1) % NUMBER_OF_QUESTIONS_PER_PAGE) != 0 {
 		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - menej otazok nez pocet", "PDF strana", pageNumber+1)
-		// fmt.Printf("questionNumber %d %% len(answers) %d - strana: %d\n", questionNumber+1, len(answers), pageNumber+1)
-		// Gather pageNumbers to map
 		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
 	}

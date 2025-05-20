@@ -27,7 +27,6 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 
 	statsData := make(map[string]interface{})
 
-	// Initialize statistics options
 	statsData["includeMax"] = false
 	statsData["includeMin"] = false
 	statsData["includeAvg"] = false
@@ -37,7 +36,6 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 	statsData["includeOverallSuccess"] = false
 	statsData["includePerQuestionSuccess"] = false
 
-	// Collect requested statistics
 	for _, stat := range selectedStats {
 		switch stat {
 		case "Maximum bodov":
@@ -87,21 +85,18 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 		}
 	}
 
-	// Generate LaTeX report
 	latexContent, err := GenerateLatexReport(exam, statsData)
 	if err != nil {
 		errorLogger.Error("Chyba pri generovaní LaTeXu", slog.String("error", err.Error()))
 		return "", err
 	}
 
-	// Compile LaTeX to PDF
 	pdfBytes, err := CompileLatexToPDF(latexContent)
 	if err != nil {
 		errorLogger.Error("Chyba pri kompilácii LaTeXu", slog.String("error", err.Error()))
 		return "", err
 	}
 
-	// Save PDF to file
 	dirPath, err := config.LoadLastPath()
 	if err != nil {
 		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
@@ -123,7 +118,6 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 	return outputPath, nil
 }
 
-// getScores extracts the scores from a slice of students and returns them as a list of integers.
 func getScores(students []models.Student) []int {
 	scores := make([]int, len(students))
 	for i, s := range students {
@@ -132,7 +126,6 @@ func getScores(students []models.Student) []int {
 	return scores
 }
 
-// calculateMax calculates and returns the maximum score from the list of scores.
 func calculateMax(scores []int) int {
 	if len(scores) == 0 {
 		return 0
@@ -146,7 +139,6 @@ func calculateMax(scores []int) int {
 	return max
 }
 
-// calculateMin calculates and returns the minimum score from the list of scores.
 func calculateMin(scores []int) int {
 	if len(scores) == 0 {
 		return 0
@@ -160,7 +152,6 @@ func calculateMin(scores []int) int {
 	return min
 }
 
-// calculateAverage calculates and returns the average score from the list of scores.
 func calculateAverage(scores []int) float64 {
 	if len(scores) == 0 {
 		return 0
@@ -172,7 +163,6 @@ func calculateAverage(scores []int) float64 {
 	return float64(sum) / float64(len(scores))
 }
 
-// calculateMedian calculates and returns the median score from the list of scores.
 func calculateMedian(scores []int) float64 {
 	if len(scores) == 0 {
 		return 0
@@ -185,7 +175,6 @@ func calculateMedian(scores []int) float64 {
 	return float64(scores[mid])
 }
 
-// calculateOverallSuccess calculates and returns the total number of correct answers and the relative success rate.
 func calculateOverallSuccess(students []models.Student, totalQuestions int) (int, float64) {
 	totalPossible := totalQuestions * len(students)
 	totalCorrect := 0
@@ -196,7 +185,6 @@ func calculateOverallSuccess(students []models.Student, totalQuestions int) (int
 	return totalCorrect, relative
 }
 
-// latexEscape escapes special characters for LaTeX compatibility.
 func latexEscape(str string) string {
 	replacer := strings.NewReplacer(
 		"\\", "\\textbackslash{}",
@@ -213,7 +201,6 @@ func latexEscape(str string) string {
 	return replacer.Replace(str)
 }
 
-// GenerateLatexReport generates the LaTeX content for the exam report.
 func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([]byte, error) {
 	var builder strings.Builder
 
@@ -231,7 +218,6 @@ func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([
 	\maketitle
 	`)
 
-	// Basic statistics table
 	if statsData["includeMax"].(bool) || statsData["includeMin"].(bool) || statsData["includeAvg"].(bool) || statsData["includeMedian"].(bool) || statsData["includeOverallSuccess"].(bool) {
 		builder.WriteString(`\section{Základné štatistiky}`)
 	}
@@ -240,7 +226,6 @@ func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([
 	\hline
 	`)
 
-	// Include maximum, minimum, average, and median values if requested
 	if statsData["includeMax"].(bool) {
 		builder.WriteString(fmt.Sprintf("Maximum bodov & %d \\\\\n\\hline\n", statsData["max"].(int)))
 	}
@@ -261,7 +246,6 @@ func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([
 
 	builder.WriteString(`\end{tabular}`)
 
-	// Score distribution graph
 	if statsData["includeScoreDistribution"].(bool) {
 		labels, coords := buildPlotData(statsData["scores"].([]int))
 
@@ -287,7 +271,6 @@ func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([
 		`)
 	}
 
-	// Success rate per question graph
 	if statsData["includePerQuestionDistribution"].(bool) {
 		successRates := statsData["successPerQuestion"].([]float64)
 		labels, coords := buildPerQuestionPlotData(successRates)
@@ -322,7 +305,6 @@ func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([
 		absolute := statsData["absolutePerQuestion"].([]int)
 		relative := statsData["relativePerQuestion"].([]float64)
 
-		// First table: original order of exam questions
 		builder.WriteString(`
 		\section{Úspešnosť za jednotlivé príklady (pôvodné poradie)}
 		\begin{tabular}{|l|r|r|}
@@ -334,7 +316,6 @@ func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([
 		}
 		builder.WriteString(`\end{tabular}`)
 
-		// Second table: exam questions ordered by relative success
 		type question struct {
 			number   int
 			absolute int
@@ -369,7 +350,6 @@ func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([
 	return []byte(builder.String()), nil
 }
 
-// buildPlotData processes the score data into labels and coordinates for LaTeX plotting.
 func buildPlotData(scores []int) (labels string, coordinates string) {
 	distribution := make(map[int]int)
 	for _, s := range scores {
@@ -392,7 +372,6 @@ func buildPlotData(scores []int) (labels string, coordinates string) {
 	return strings.Join(labelParts, ","), strings.Join(coordParts, "\n")
 }
 
-// buildPerQuestionPlotData processes the success rate data for each question.
 func buildPerQuestionPlotData(successRates []float64) (labels string, coordinates string) {
 	var labelParts, coordParts []string
 	for i, rate := range successRates {

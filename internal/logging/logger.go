@@ -16,51 +16,43 @@ var (
 	once        sync.Once
 )
 
-// InitLogger inicializuje logger s rôznymi úrovňami pre app.log a error.log
 func InitLogger() {
 	once.Do(func() {
 		logsDir := "logs"
 
-		// Vytvorenie priečinka, ak neexistuje
 		if err := os.MkdirAll(logsDir, os.ModePerm); err != nil {
 			log.Fatalf("CRITICAL: Nepodarilo sa vytvoriť priečinok logs: %v", err)
 		}
 
-		// Rotujúce log súbory pre app.log
 		appLogWriter := &lumberjack.Logger{
 			Filename:   filepath.Join(logsDir, "app.log"),
-			MaxSize:    5,    // Max 5 MB
-			MaxBackups: 3,    // Udržiava max 3 staré logy
-			MaxAge:     7,    // Ukladá logy max 7 dní
-			Compress:   true, // Kompresia starých logov
+			MaxSize:    5,    
+			MaxBackups: 3,    
+			MaxAge:     7,    
+			Compress:   true, 
 		}
 
-		// Rotujúce log súbory pre error.log
 		errorLogWriter := &lumberjack.Logger{
 			Filename:   filepath.Join(logsDir, "error.log"),
-			MaxSize:    5,    // Max 5 MB
-			MaxBackups: 3,    // Udržiava max 3 staré logy
-			MaxAge:     7,    // Ukladá logy max 7 dní
-			Compress:   true, // Kompresia starých logov
+			MaxSize:    5,    
+			MaxBackups: 3,    
+			MaxAge:     7,    
+			Compress:   true, 
 		}
 
-		// Handler pre DEBUG, INFO, WARNING
 		appHandler := slog.NewTextHandler(appLogWriter, &slog.HandlerOptions{
-			Level: slog.LevelDebug, // Umožní logovanie od úrovne DEBUG a vyššie
+			Level: slog.LevelDebug, 
 		})
 
-		// Handler pre ERROR, CRITICAL
 		errorHandler := slog.NewTextHandler(errorLogWriter, &slog.HandlerOptions{
-			Level: slog.LevelError, // Umožní logovanie od úrovne ERROR a vyššie
+			Level: slog.LevelError, 
 		})
 
-		// Inicializácia loggerov
 		logger = slog.New(appHandler)
 		errorLogger = slog.New(errorHandler)
 	})
 }
 
-// GetLogger vráti logger pre app.log
 func GetLogger() *slog.Logger {
 	if logger == nil {
 		InitLogger()
@@ -68,7 +60,6 @@ func GetLogger() *slog.Logger {
 	return logger
 }
 
-// GetErrorLogger vráti logger pre error.log
 func GetErrorLogger() *slog.Logger {
 	if errorLogger == nil {
 		InitLogger()

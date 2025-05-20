@@ -39,7 +39,6 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
 	questionNumber := common.QUESTION_NUMBER_NOT_FOUND
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
 		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i))
-		// if we dont have question number yet try to find it
 		if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
 			questionNumber = GetQuestionNumber(&croppedMat, i)
 			continue
@@ -52,7 +51,6 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
 
 	}
 	*mat = croppedMat
-	// if we didnt find question number in whole page
 	if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
 		return common.QUESTION_NUMBER_NOT_FOUND, nil
 	}
@@ -95,7 +93,6 @@ func CropMatAnswersOnly(mat *gocv.Mat) gocv.Mat {
 func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) image.Rectangle {
 	errorLogger := logging.GetErrorLogger()
 	contours := FindContours(*mat)
-	// Find rectangle
 	for i := 0; i < contours.Size(); i++ {
 		c := contours.At(i)
 		approx := gocv.ApproxPolyDP(c, 0.01*gocv.ArcLength(c, true), true)
@@ -190,7 +187,6 @@ func GetAnswer(mat *gocv.Mat, i int) rune {
 				answer = rune('x')
 			}
 		}
-		//fmt.Println(meanIntensity.Val1)
 		defer checkboxMat.Close()
 		defer rectMat.Close()
 	}

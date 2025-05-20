@@ -200,10 +200,10 @@ var expectedAnswer_130 = map[int]string{
 	753491: "bcbcbcbcbcbcbcbcbcbcebecddeedddeeeeddddd",
 	110198: "abcdedcbabcdedcbabcdabcdedcbabcdedcbabcd",
 	705932: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-	537282: "eeeeedddddcccccbbbbbeeeeeeeeeeeeeeeeeeee", // opilec vyplnal (zle kriziky)
+	537282: "eeeeedddddcccccbbbbbeeeeeeeeeeeeeeeeeeee", 
 	484470: "eeeddcccccaaabbbbbabdddddcccccbbbbbaaaaa",
 	422417: "aabbaabbaabbaabbaabbdddddddddddddddeeeee",
-	761336: "aaaaabbbbbcccccdddddeeeeeeeeeeeeeeeccccc", // opilec
+	761336: "aaaaabbbbbcccccdddddeeeeeeeeeeeeeeeccccc", 
 	392411: "cbbbbxddddeeeeeaaaaacccccdddddaaaaaccbcc",
 	212971: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 	783424: "ededededededededededeeeeeeeeeeeeeeeeeeee",
@@ -213,8 +213,8 @@ var expectedAnswer_130 = map[int]string{
 	639863: "abcdedcbabcdedcbabcdabcdeedcbabcdeeeeeee",
 	363580: "abcdedcbabcdedcbabcdabcdedcbabcdeeedcbab",
 	985335: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-	168030: "aaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaa", // tu bola dopisana 21 v papieri
-	235850: "dcdcdcdcdcdcdcdcdcdcbcbcbcbcbcbcbcbcbcbb", // predposledne mozno x 34slide
+	168030: "aaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaa", 
+	235850: "dcdcdcdcdcdcdcdcdcdcbcbcbcbcbcbcbcbcbcbb", 
 	798399: "edcbabcdedcbabcdedcbabcdedcbabcdedcbabcx",
 	731579: "bbcccdddddeeeeeaaaaabbbbbbbbbbcccccddddd",
 	760018: "aaaaabbbbbcccccdddddcccccdddddeeeeeccccc",
@@ -353,7 +353,7 @@ func getTestFilePath(relativePath string) string {
 }
 
 func TestAnswerRecognition(t *testing.T) {
-	var counter int = 0 // kvoli pocitaniu spracovanych odpovedi
+	var counter int = 0 
 	var hadFailures bool = false
 	pdfPath := getTestFilePath("scan-pdfs/9_April/200.pdf")
 	scanprocessing.LoadConfig("Zasadacka_200dpi")
@@ -374,7 +374,7 @@ func TestAnswerRecognition(t *testing.T) {
 			t.Fatalf("Nepodarilo sa aktualizovať študenta (ID: %d): %v", student.ID, err)
 		}
 	}
-	exam, err := repository.GetExam(db, 1) // testID = 1
+	exam, err := repository.GetExam(db, 1) 
 	if err != nil {
 		t.Fatalf("Nepodarilo sa načítať skúšku: %v", err)
 	}
@@ -443,7 +443,7 @@ func TestStudentAnswersExistence(t *testing.T) {
 	totalStudents := len(expectedResults)
 	recognizedCount := 0
 	for studentID := range expectedResults {
-		student, err := repository.GetStudentById(db, uint(studentID), 1) // testID = 1
+		student, err := repository.GetStudentById(db, uint(studentID), 1) 
 		if err != nil {
 			t.Errorf("Študent %d nebol nájdený: %v", studentID, err)
 			continue
@@ -472,7 +472,7 @@ func TestMissingPages(t *testing.T) {
 	missingPages := 0
 
 	for studentID := range expectedResults {
-		student, err := repository.GetStudentById(db, uint(studentID), 1) // testID = 1
+		student, err := repository.GetStudentById(db, uint(studentID), 1) 
 		if err != nil {
 			t.Errorf("Študent %d nebol nájdený: %v", studentID, err)
 			missingPages++
