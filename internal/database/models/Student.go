@@ -6,7 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// Student reprezentuje študenta
 type Student struct {
 	gorm.Model
 	Name               string    `gorm:"not null"`

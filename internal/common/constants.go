@@ -14,7 +14,6 @@ const (
 	QUESTION_NUMBER_NOT_FOUND = -1
 )
 
-// TODO - prerobit nejako, aby sa vracali normalne spravy, ked nastane error, toto je zatial ako SABLONA
 const (
 	SUCCESS         = 0
 	FILE_NOT_FOUND  = 1

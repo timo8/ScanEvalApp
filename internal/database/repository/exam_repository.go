@@ -40,7 +40,7 @@ func GetAllExams(db *gorm.DB) ([]models.Exam, error) {
 	errorLogger := logging.GetErrorLogger()
 
 	var exams []models.Exam
-	result := db.Preload("Students").Find(&exams) // Načítame aj priradených študentov
+	result := db.Preload("Students").Find(&exams) 
 	if result.Error != nil {
 		errorLogger.Error("Chyba pri načítavaní testov", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 	}

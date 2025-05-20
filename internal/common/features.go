@@ -23,14 +23,11 @@ func isDiacritic(r rune) bool {
 
 // sanitizeFilename converts string to safe ASCII-only filename
 func SanitizeFilename(name string) string {
-	// Remove diacritics
 	name = RemoveDiacritics(name)
 
-	// Replace spaces and dashes with underscores
 	name = strings.ReplaceAll(name, " ", "_")
 	name = strings.ReplaceAll(name, "-", "_")
 
-	// Remove all non-alphanumeric, non-underscore characters
 	reg := regexp.MustCompile(`[^a-zA-Z0-9_]+`)
 	name = reg.ReplaceAllString(name, "")
 
