@@ -21,12 +21,9 @@ import (
 	"ScanEvalApp/internal/gui/widgets"
 	"ScanEvalApp/internal/logging"
 	"ScanEvalApp/internal/scanprocessing"
-	"log"
 
 	"time"
-
 	"gorm.io/gorm"
-
 	"os"
 )
 
@@ -124,9 +121,11 @@ func (t *UploadTab) Layout(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, w
 }
 
 func (t *UploadTab) openFileDialog(db *gorm.DB, th *themeUI.Theme) {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
 	file, err := t.explorer.ChooseFile()
 	if err != nil {
-		log.Println("Chyba pri výbere súboru:", err)
+		errorLogger.Error("Chyba pri výbere súboru", slog.String("error", err.Error()))
 		return
 	}
 	if file != nil {
@@ -134,9 +133,9 @@ func (t *UploadTab) openFileDialog(db *gorm.DB, th *themeUI.Theme) {
 
 		if f, ok := file.(*os.File); ok {
 			t.filePath = f.Name()
-			fmt.Println("Cesta k súboru:", t.filePath)
+			logger.Info("Cesta k súboru", "path", t.filePath)
 		} else {
-			log.Println("file nie je typu *os.File")
+			errorLogger.Error("File nie je typu *os.File")
 		}
 		t.uploadModal.Visible = true
 		t.uploadModal.Content = t.BuildProgressContent(th)
@@ -173,12 +172,13 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 	var counter int = 0
 	errorLogger := logging.GetErrorLogger()
 	if t.examID == 0 && t.filePath == "" {
-		fmt.Println("nevybrané povinné súbory")
+		errorLogger.Error("Neboli vybrané povinné súbory")
 		return
 	}
 
 	exam, err := repository.GetExam(db, t.examID)
 	if err != nil {
+		errorLogger.Error("Chyba pri načítaní testu.")
 		t.progressChan <- "Chyba pri načítaní testu."
 		return
 	}
@@ -216,9 +216,11 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 }
 
 func NewDropdown() Dropdown {
+	errorLogger := logging.GetErrorLogger()
+
 	options, err := files.GetFilesFromConfigs()
 	if err != nil {
-		log.Println("Error reading config files:", err)
+		errorLogger.Error("Error reading config files", slog.String("error", err.Error()))
 	}
 
 	dropdown := Dropdown{
@@ -229,7 +231,7 @@ func NewDropdown() Dropdown {
 	if len(options) > 0 {
 		dropdown.selected.Value = options[0]
 		if err := scanprocessing.LoadConfig(options[0]); err != nil {
-			log.Println("Chyba pri načítaní predvoleného konfigu:", err)
+			errorLogger.Error("Chyba pri načítaní predvoleného konfigu", slog.String("error", err.Error()))
 		}
 
 	}
@@ -238,11 +240,13 @@ func NewDropdown() Dropdown {
 }
 
 func (d *Dropdown) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
+	errorLogger := logging.GetErrorLogger()
+
 	if d.selected.Value != d.lastValue {
 		d.lastValue = d.selected.Value
 		err := scanprocessing.LoadConfig(d.selected.Value)
 		if err != nil {
-			fmt.Println("Chyba pri načítaní konfiguračného súboru:", err)
+			errorLogger.Error("hyba pri načítaní konfiguračného súboru", slog.String("error", err.Error()))
 		}
 	}
 
