@@ -33,7 +33,7 @@ func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
 
 	for i, row := range rows {
 		if i == 0 {
-			continue // Preskoc hlavicku csv
+			continue 
 		}
 		birthDate, err := time.Parse("2006-01-02", row[2])
 		if err != nil {
@@ -106,7 +106,6 @@ func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	// Hlavicka CSV
 	err = writer.Write([]string{"ID", "Meno", "Priezvisko", "Registračné číslo", "Skóre"})
 
 	if err != nil {

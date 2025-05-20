@@ -9,7 +9,6 @@ import (
 	"gioui.org/widget/material"
 )
 
-// CheckboxWithLabel vykreslí checkbox s labelom vedľa seba a nastaviteľnou veľkosťou fontu
 func Checkbox(gtx layout.Context, th *themeUI.Theme, checkbox *widget.Bool, label string, fontSize unit.Sp) layout.Dimensions {
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {

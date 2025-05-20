@@ -149,7 +149,6 @@ func (t *UploadCsv) CreateExam(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 						}.Layout(gtx, renderOptions(gtx, th, i+1, qf)...)
 					}
 
-					// Posledný element - tlačidlo "Vytvoriť test"
 					return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						btn := widgets.Button(th.Theme, &submitButton, widgets.SaveIcon, widgets.IconPositionStart, "Vytvoriť test")
 						btn.Background = themeUI.LightGreen
@@ -223,13 +222,13 @@ func updateQuestionForms(n int) {
 
 func renderQuestionForms(gtx layout.Context, th *themeUI.Theme) []layout.FlexChild {
 	children := make([]layout.FlexChild, len(questionForms))
-	for i := range questionForms { // Prechádzame len indexy, aby sme pracovali priamo so slice-om
-		qf := &questionForms[i] // Uložíme si pointer na konkrétny prvok
+	for i := range questionForms {
+		qf := &questionForms[i] 
 		children[i] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Axis:    layout.Horizontal,
 				Spacing: layout.SpaceAround,
-			}.Layout(gtx, renderOptions(gtx, th, i+1, qf)...) // Odovzdávame pointer na správny prvok
+			}.Layout(gtx, renderOptions(gtx, th, i+1, qf)...) 
 		})
 	}
 	return children
@@ -237,14 +236,12 @@ func renderQuestionForms(gtx layout.Context, th *themeUI.Theme) []layout.FlexChi
 
 func renderOptions(gtx layout.Context, th *themeUI.Theme, questionIndex int, qf *questionForm) []layout.FlexChild {
 	options := []string{"A", "B", "C", "D", "E"}
-	children := make([]layout.FlexChild, len(options)+1) // Prvý prvok je číslo otázky
+	children := make([]layout.FlexChild, len(options)+1) 
 
-	// Pridáme číslo otázky (napr. "01:")
 	children[0] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 		return material.Label(th.Theme, unit.Sp(15), fmt.Sprintf("%02d:", questionIndex)).Layout(gtx)
 	})
 
-	// Vykreslíme rádio tlačidlá pre možnosti A–E
 	for i, option := range options {
 		i, option := i, option
 		children[i+1] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -274,14 +271,12 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 	nazov := nameInput.Text()
 	skrok := schoolYear.Text()
 	if !isValidSchoolYear(skrok) {
-		// Použijeme logger na logovanie chyby
 		errorLogger.Error("Neplatný školský rok", slog.Group("INFO", slog.String("sk.rok", skrok)))
 		return
 	}
 	datumacas := datetimeInput.Text()
 	parsedDateTime, valid := parseDateTime(datumacas)
 	if !valid {
-		// Logovanie chyby s detailmi
 		errorLogger.Error("Neplatný dátum a čas", slog.Group("INFO", slog.String("datumacas", datumacas)))
 		return
 	}
@@ -297,7 +292,6 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 	}
 	answersStr := strings.Join(answers, "")
 
-	// Vytvorenie testu
 	exam := models.Exam{
 		Title:         nazov,
 		SchoolYear:    skrok,
@@ -305,7 +299,6 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 		QuestionCount: pocetOtazok,
 		Questions:     answersStr,
 	}
-	// ulozenie do db
 	err = repository.CreateExam(db, &exam)
 	if err != nil {
 		errorLogger.Error("Chyba pri ukladaní testu", slog.Group("CRITICAL", slog.String("error", err.Error())))
@@ -323,7 +316,6 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 		slog.String("examID", strconv.Itoa(int(exam.ID))),
 		slog.Int("questionCount", exam.QuestionCount))
 
-	// Resetovanie vstupov
 	nameInput.SetText("")
 	schoolYear.SetText("")
 	datetimeInput.SetText("")
@@ -332,7 +324,6 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 	t.filePath = ""
 	showQuestions = false
 
-	// Resetovanie otázok
 	questionForms = nil
 	tm.ActiveTab = 0
 }

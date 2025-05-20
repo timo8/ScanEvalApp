@@ -14,7 +14,6 @@ type EditorField struct {
 	Editor      *widget.Editor
 	Placeholder string
 	BorderColor color.NRGBA
-	//Width		unit.Dp
 }
 
 func NewEditorField(th *material.Theme, input *widget.Editor, placeholder string) *EditorField {
@@ -22,7 +21,6 @@ func NewEditorField(th *material.Theme, input *widget.Editor, placeholder string
 		Editor:      input,
 		Placeholder: placeholder,
 		BorderColor: color.NRGBA{A: 255},
-		//Width:       width,
 	}
 	e.Editor.SingleLine = true
 	return e
@@ -48,8 +46,6 @@ func (e *EditorField) Layout(gtx layout.Context, theme *themeUI.Theme) layout.Di
 	}
 
 	return border.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		//minWidth := gtx.Dp(e.Width)
-		//gtx.Constraints.Min.X = minWidth
 		return layout.Inset{
 			Top:    unit.Dp(4),
 			Bottom: unit.Dp(4),

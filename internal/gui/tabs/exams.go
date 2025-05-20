@@ -44,7 +44,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 	}
 
 	columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Dátum", "Ukázať odpovede", "Štatistika", "Vymazať", "Vyhodnotiť", "Tlačiť", "CSV"}
-	columnWidths := []float32{0.180, 0.06, 0.08, 0.1, 0.075, 0.1, 0.1, 0.1, 0.1, 0.1, 0.05} // Pomery šírok
+	columnWidths := []float32{0.180, 0.06, 0.08, 0.1, 0.075, 0.1, 0.1, 0.1, 0.1, 0.1, 0.05} 
 	if len(deleteButtons) != len(exams) {
 		deleteButtons = make([]widget.Clickable, len(exams))
 	}
