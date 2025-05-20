@@ -19,7 +19,6 @@ func main() {
 
 	logger.Info("Aplikácia spustená")
 
-	// inicializacia a migracia db
 	logger.Info("Spúšťam migráciu databázy.")
 	db, err := migrations.MigrateDB()
 	if err != nil {
